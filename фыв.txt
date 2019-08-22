@@ -1,0 +1,188 @@
+SET SERVEROUTPUT ON
+
+DECLARE
+input_string      VARCHAR2(4000) := 'Morgen, morgen, nur nicht heute';
+
+work_string       VARCHAR2(4000);
+
+encrypted_string  VARCHAR2(4000);
+
+decrypted_string  VARCHAR2(4000);
+
+BEGIN
+DBMS_OUTPUT.PUT_LINE(input_string);
+
+work_string := RPAD
+                ( input_string
+                , (TRUNC(LENGTH(input_string) / 8) + 1 ) * 8
+                , CHR(0)
+                );
+
+DBMS_OBFUSCATION_TOOLKIT.DESENCRYPT
+           (
+             input_string     => work_string
+           , key_string       => 'MagicKey'
+           , encrypted_string => encrypted_string
+           );
+
+DBMS_OBFUSCATION_TOOLKIT.DESDECRYPT
+           (
+            input_string     => encrypted_string
+           ,key_string       => 'MagicKey'
+           ,decrypted_string => work_string
+           );
+
+decrypted_string := RTRIM(work_string, CHR(0));
+
+DBMS_OUTPUT.PUT_LINE(encrypted_string);
+END;
+/
+
+SET SERVEROUTPUT ON
+DECLARE
+input_string     VARCHAR2(255) := 'Morgen, morgen, nur nicht heute';
+raw_input        RAW(4000);
+
+key_string       VARCHAR2(8)  := 'MagicKey';
+raw_key          RAW(16);
+
+encrypted_raw    RAW(4000);
+encrypted_string VARCHAR2(4000);
+
+decrypted_raw    RAW(4000);
+decrypted_string VARCHAR2(4000);
+
+BEGIN
+--DBMS_OUTPUT.PUT_LINE(input_string);
+
+raw_input := UTL_I18N.STRING_TO_RAW (input_string, 'AL32UTF8');
+
+raw_key := UTL_RAW.CAST_TO_RAW(CONVERT(key_string, 'AL32UTF8'));
+
+encrypted_raw := DBMS_CRYPTO.ENCRYPT
+                 (
+                  TYP => DBMS_CRYPTO.ENCRYPT_DES 
+     + DBMS_CRYPTO.CHAIN_CBC 
+     + DBMS_CRYPTO.PAD_ZERO
+                 ,SRC => raw_input
+                 ,KEY => raw_key
+                 );
+
+decrypted_raw := DBMS_CRYPTO.DECRYPT
+                 (
+                  TYP =>DBMS_CRYPTO.ENCRYPT_DES 
+     + DBMS_CRYPTO.CHAIN_CBC 
+     + DBMS_CRYPTO.PAD_ZERO
+                 ,SRC => encrypted_raw
+                 ,KEY => raw_key
+                 );
+
+decrypted_string := UTL_I18N.RAW_TO_CHAR (decrypted_raw, 'AL32UTF8');
+encrypted_string :=  UTL_I18N.RAW_TO_CHAR (encrypted_raw, 'AL32UTF8');
+DBMS_OUTPUT.PUT_LINE(encrypted_string);
+END; 
+/
+
+
+CREATE OR REPLACE PACKAGE encryption_of_FP IS
+    FUNCTION enrypt_data(data_to VARCHAR2) RETURN VARCHAR2; 
+END encryption_of_FP;
+CREATE OR REPlACE PACKAGE BODY encryption_of_FP IS
+    FUNCTION encrypt_data (input_string VARCHAR2) RETURN VARCHAR2 IS
+            BEGIN
+            raw_input := UTL_I18N.STRING_TO_RAW (input_string, 'AL32UTF8');
+            raw_key := UTL_RAW.CAST_TO_RAW(CONVERT(key_string, 'AL32UTF8'));
+            encrypted_raw := DBMS_CRYPTO.ENCRYPT(
+                  TYP => DBMS_CRYPTO.ENCRYPT_DES + DBMS_CRYPTO.CHAIN_CBC + DBMS_CRYPTO.PAD_ZERO
+                 ,SRC => raw_input
+                 ,KEY => raw_key);
+            decrypted_raw := DBMS_CRYPTO.DECRYPT(
+                  TYP =>DBMS_CRYPTO.ENCRYPT_DES + DBMS_CRYPTO.CHAIN_CBC + DBMS_CRYPTO.PAD_ZERO
+                 ,SRC => encrypted_raw
+                 ,KEY => raw_key);
+
+decrypted_string := UTL_I18N.RAW_TO_CHAR (decrypted_raw, 'AL32UTF8');
+encrypted_string :=  UTL_I18N.RAW_TO_CHAR (encrypted_raw, 'AL32UTF8');
+return encrypted_string;
+END; 
+END encryption_of_FP;
+
+
+SET SERVEROUTPUT ON
+DBMS_OUTPUT.PUT_LINE(encryption_of_FP.encrypt_data('Dimash'));
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+create or replace TRIGGER ENCRY_EMAIL
+BEFORE INSERT ON CUSTOMER
+    FOR EACH ROW
+    DECLARE
+input_string      VARCHAR2(4000);
+
+work_string       VARCHAR2(4000);
+
+encrypted_string  VARCHAR2(4000);
+
+decrypted_string  VARCHAR2(4000);
+        BEGIN
+            input_string := :NEW.EMAIL;
+
+work_string := RPAD
+                ( input_string
+                , (TRUNC(LENGTH(input_string) / 8) + 1 ) * 8
+                , CHR(0)
+                );
+
+DBMS_OBFUSCATION_TOOLKIT.DESENCRYPT
+           (
+             input_string     => work_string
+           , key_string       => 'MagicKey'
+           , encrypted_string => encrypted_string
+           );
+
+DBMS_OBFUSCATION_TOOLKIT.DESDECRYPT
+           (
+            input_string     => encrypted_string
+           ,key_string       => 'MagicKey'
+           ,decrypted_string => work_string
+           );
+
+decrypted_string := RTRIM(work_string, CHR(0));
+
+DBMS_OUTPUT.PUT_LINE(encrypted_string);
+            :NEW.email := encrypted_string;
+END ENCRY_EMAIL; 
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+create or replace TRIGGER ENCRY_EMAIL
+BEFORE INSERT ON CUSTOMER
+    FOR EACH ROW
+    DECLARE
+        input_string     VARCHAR2(255);
+        raw_input        RAW(4000);
+        key_string       VARCHAR2(8)  := 'MagicKey';
+        raw_key          RAW(16);
+        encrypted_raw    RAW(4000);
+        encrypted_string VARCHAR2(4000);  
+        decrypted_raw    RAW(4000);
+        decrypted_string VARCHAR2(4000);
+        BEGIN
+            input_string := :NEW.EMAIL;
+            raw_input := UTL_I18N.STRING_TO_RAW (input_string, 'AL32UTF8');
+            raw_key := UTL_RAW.CAST_TO_RAW(CONVERT(key_string, 'AL32UTF8'));
+            encrypted_raw := DBMS_CRYPTO.ENCRYPT(
+                  TYP => DBMS_CRYPTO.ENCRYPT_DES + DBMS_CRYPTO.CHAIN_CBC + DBMS_CRYPTO.PAD_ZERO
+                 ,SRC => raw_input
+                 ,KEY => raw_key);
+
+            decrypted_raw := DBMS_CRYPTO.DECRYPT
+                 (
+                  TYP =>DBMS_CRYPTO.ENCRYPT_DES  + DBMS_CRYPTO.CHAIN_CBC  + DBMS_CRYPTO.PAD_ZERO
+                 ,SRC => encrypted_raw
+                 ,KEY => raw_key);
+
+            decrypted_string := UTL_I18N.RAW_TO_CHAR (decrypted_raw, 'AL32UTF8');
+            encrypted_string :=  UTL_I18N.RAW_TO_CHAR (encrypted_raw, 'AL32UTF8');
+            :NEW.email := encrypted_string;
+END ENCRY_EMAIL; 
